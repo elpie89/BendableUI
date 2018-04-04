@@ -1,0 +1,7 @@
+/Library
+/UnityPackageManager
+/.vs
+/Temp
+
+*.sln
+*.csprj
