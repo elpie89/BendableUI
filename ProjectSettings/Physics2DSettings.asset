@@ -24,6 +24,10 @@ Physics2DSettings:
   m_QueriesStartInColliders: 1
   m_ChangeStopsCallbacks: 0
   m_CallbacksOnDisable: 1
+<<<<<<< Updated upstream
+=======
+  m_AutoSyncTransforms: 1
+>>>>>>> Stashed changes
   m_AlwaysShowColliders: 0
   m_ShowColliderSleep: 1
   m_ShowColliderContacts: 0

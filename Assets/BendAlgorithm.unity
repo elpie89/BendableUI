@@ -980,7 +980,7 @@ MonoBehaviour:
   - {fileID: 745098367}
   bendPivot: {fileID: 316420871}
   curvatureK: 1
-  bendOffset: 1
+  bendOffset: 2
 --- !u!4 &1751245264
 Transform:
   m_ObjectHideFlags: 0
