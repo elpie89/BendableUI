@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class BendableMesh : MonoBehaviour, IMeshModifier
-{
+[ExecuteInEditMode]
+public class BendUI : Graphic {
+
     public enum BendType
     {
         Sphere,
@@ -17,8 +18,6 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
 
     public int subdivisionLevel = 0;
     public Transform bendPivot;
-    private RectTransform rectTransform;
-    private Image img;
 
     public float curvatureK;
     float xMin;
@@ -26,20 +25,10 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
     float yMin;
     float yMax;
 
-    private void Start()
+    protected override void OnPopulateMesh(VertexHelper verts)
     {
-        img = GetComponent<Image>();
-    }
+        BasicQuad(verts);
 
-    public void ModifyMesh(Mesh mesh)
-    {
-        throw new System.NotImplementedException();
-    }
-
-    public void ModifyMesh(VertexHelper verts)
-    {
-        rectTransform = GetComponent<RectTransform>();
-       
         if (subdivisionLevel < 1)
         {
             return;
@@ -80,16 +69,52 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
             }
         }
 
-       
+               
+        
     }
 
-    private void Update()
+    private void BasicQuad(VertexHelper vh)
     {
-        if (img != null)
-        {
-            img.SetAllDirty();
-        }
-        
+        Vector2 corner1 = Vector2.zero;
+        Vector2 corner2 = Vector2.zero;
+
+        corner1.x = 0f;
+        corner1.y = 0f;
+        corner2.x = 1f;
+        corner2.y = 1f;
+
+        corner1.x -= rectTransform.pivot.x;
+        corner1.y -= rectTransform.pivot.y;
+        corner2.x -= rectTransform.pivot.x;
+        corner2.y -= rectTransform.pivot.y;
+
+        corner1.x *= rectTransform.rect.width;
+        corner1.y *= rectTransform.rect.height;
+        corner2.x *= rectTransform.rect.width;
+        corner2.y *= rectTransform.rect.height;
+
+        vh.Clear();
+
+        UIVertex vert = UIVertex.simpleVert;
+
+        vert.position = new Vector2(corner1.x, corner1.y);
+        vert.color = color;
+        vh.AddVert(vert);
+
+        vert.position = new Vector2(corner1.x, corner2.y);
+        vert.color = color;
+        vh.AddVert(vert);
+
+        vert.position = new Vector2(corner2.x, corner2.y);
+        vert.color = color;
+        vh.AddVert(vert);
+
+        vert.position = new Vector2(corner2.x, corner1.y);
+        vert.color = color;
+        vh.AddVert(vert);
+
+        vh.AddTriangle(0, 1, 2);
+        vh.AddTriangle(2, 3, 0);
     }
 
     private List<UIVertex> SubdivedTringle(UIVertex a, UIVertex b, UIVertex c)
@@ -117,6 +142,7 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
 
     private void InitVertex(ref UIVertex c , UIVertex a, UIVertex b)
     {
+        c = UIVertex.simpleVert;
         c.position = (a.position + b.position) * 0.5f;
         c.color = Color32.Lerp(a.color, b.color, 0.5f);
         c.uv0 = (a.uv0 + b.uv0) * 0.5f;
@@ -129,7 +155,7 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
 
     private void BendAlongY(VertexHelper vh)
     {
-        xMin = bendPivot.position.x - (rectTransform.rect.width / 2);
+        xMin = bendPivot.position.x - (rectTransform.rect.width /2);
         xMax = bendPivot.position.x + (rectTransform.rect.width / 2);
         List<UIVertex> vertices = new List<UIVertex>();
 
@@ -137,7 +163,7 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
         for (int i = 0; i < vh.currentIndexCount; i++)
         {
             UIVertex v = new UIVertex();
-            vh.PopulateUIVertex(ref v, i);
+            vh.PopulateUIVertex(ref v,i);
 
             float bendRange = 0;
             float x = v.position.x;
@@ -161,7 +187,7 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
                 print("there is something wrong here");
             }
 
-            float curvFactor = curvatureK / rectTransform.rect.width;
+           float curvFactor = curvatureK / rectTransform.rect.width;
 
             float tetaAngle = curvFactor * (bendRange - xo);
             float cos = Mathf.Cos(tetaAngle);
@@ -196,11 +222,11 @@ public class BendableMesh : MonoBehaviour, IMeshModifier
             v.position.z = Znew;
 
             vh.SetUIVertex(v, i);
-
+            
         }
 
 
-
+        
     }
 
     private void BendAlongX(VertexHelper vh)
