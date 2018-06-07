@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -70,6 +71,16 @@ public class BendUI : Graphic {
         }
 
                
+        
+    }
+
+    protected void Update()
+    {
+        List<RaycastHit> unityHits =  Physics.RaycastAll(Camera.main.transform.position,Camera.main.transform.forward,100).ToList();
+        foreach (var item in unityHits)
+        {
+            Debug.Log(item.textureCoord);
+        }
         
     }
 
