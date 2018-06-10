@@ -1,47 +1,70 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 [ExecuteInEditMode]
-public class GraphicTasselletor : MonoBehaviour,IMeshModifier {
-    
-    float xMin;
-    float xMax;
-    float yMin;
-    float yMax;
+[RequireComponent(typeof(MeshCollider))]
+public class UIDeformer : MonoBehaviour, IMeshModifier
+{
+    public enum BendMode
+    {
+        Sphere,
+        CylinderX,
+        CylinderY
+    }
+
+    public Mesh UIMesh;
+    private MeshCollider collider;
+
+
+    private float xMin;
+    private float xMax;
+    private float yMin;
+    private float yMax;
 
     public Transform BendPivot { get; set; }
     public int SubdivisionLevel { get; set; }
     public RectTransform RectTransform { get; set; }
     public float CurvatureK { get; set; }
-    public CanvasDeformer.BendType TyepeOfBend { get; set; }
+    public BendMode BendType { get; set; }
 
     private bool dirty;
 
     public bool Dirty
     {
         get { return dirty; }
-        set {
+        set
+        {
             dirty = value;
-            GetComponent<Image>().Rebuild(CanvasUpdate.Prelayout);
-            //ModifyMesh(Graphics.i)
+            Debug.Log("start to rebuild");
+            //find a way to call the rebuild manually
         }
+    }
+
+    //alternative method
+    //instead of add a mesh to use for the raycas, use the 2d raycanst of the ui and return a 3d position on the deformed space 
+    //to implement
+    //to do, on validate everything shold be updated
+
+    protected void OnEnable()
+    {
+        UIMesh = new Mesh();
+        collider = GetComponent<MeshCollider>();
+        collider.sharedMesh = UIMesh;
     }
 
 
     public void ModifyMesh(Mesh mesh)
     {
         throw new System.NotImplementedException();
-    }   
-    
+    }
+
     public void ModifyMesh(VertexHelper verts)
     {
-        Debug.Log("called");
         if (SubdivisionLevel < 1)
         {
-            return ;
+            return;
         }
         else
         {
@@ -62,21 +85,26 @@ public class GraphicTasselletor : MonoBehaviour,IMeshModifier {
                 verts.Clear();
                 verts.AddUIVertexTriangleStream(new List<UIVertex>(triangles));
             }
-            if (TyepeOfBend == CanvasDeformer.BendType.CylinderY)
+            if (BendType == BendMode.CylinderY)
             {
                 BendAlongY(verts);
             }
-            if (TyepeOfBend == CanvasDeformer.BendType.CylinderX)
+            if (BendType == BendMode.CylinderX)
             {
                 BendAlongX(verts);
             }
-            if (TyepeOfBend == CanvasDeformer.BendType.Sphere)
+            if (BendType == BendMode.Sphere)
             {
                 BendAlongX(verts);
                 BendAlongY(verts);
-                //BendAlongXY(verts);
-            }
+            }            
         }
+        
+        UIMesh.Clear();
+        UIMesh.name = "UIMesh";
+        verts.FillMesh(UIMesh);
+
+
     }
     private List<UIVertex> SubdivedTringle(UIVertex a, UIVertex b, UIVertex c)
     {
@@ -166,7 +194,7 @@ public class GraphicTasselletor : MonoBehaviour,IMeshModifier {
                 print("there is something wrong here");
             }
 
-            float curvFactor = CurvatureK / RectTransform.rect.width;
+            float curvFactor = CurvatureK / -RectTransform.rect.width;
 
             float tetaAngle = curvFactor * (bendRange - xo);
             float cos = Mathf.Cos(tetaAngle);
@@ -283,135 +311,4 @@ public class GraphicTasselletor : MonoBehaviour,IMeshModifier {
 
 
     }
-
-    protected void BendAlongXY(VertexHelper vh)
-    {
-        yMin = BendPivot.position.y - (RectTransform.rect.height / 2);
-        yMax = BendPivot.position.y + (RectTransform.rect.height / 2);
-        xMin = BendPivot.position.x - (RectTransform.rect.width / 2);
-        xMax = BendPivot.position.x + (RectTransform.rect.width / 2);
-
-        List<UIVertex> vertices = new List<UIVertex>();
-
-        vh.GetUIVertexStream(vertices);
-        for (int i = 0; i < vh.currentIndexCount; i++)
-        {
-            UIVertex v = new UIVertex();
-            vh.PopulateUIVertex(ref v, i);
-
-            float bendRangeY = 0;
-            float y = v.position.y;
-            float yo = BendPivot.position.y;
-            float bendRangeX = 0;
-            float x = v.position.x;
-            float xo = BendPivot.position.x;
-
-
-            if (x <= xMin)
-            {
-                bendRangeX = xMin;
-            }
-            else if (x > xMin && x < xMax)
-            {
-                bendRangeX = x;
-            }
-            else if (x >= xMax)
-            {
-                bendRangeX = xMax;
-            }
-            else
-            {
-                print("there is something wrong here");
-            }
-
-
-            if (y <= yMin)
-            {
-                bendRangeY = yMin;
-            }
-            else if (y > yMin && y < yMax)
-            {
-                bendRangeY = y;
-            }
-            else if (y >= yMax)
-            {
-                bendRangeY = yMax;
-            }
-            else
-            {
-                print("there is something wrong here");
-            }
-
-            float curvFactor = CurvatureK / RectTransform.rect.height;
-
-            float tetaAngle = curvFactor * (bendRangeY - yo);
-            float cos = Mathf.Cos(tetaAngle);
-            float sin = Mathf.Sin(tetaAngle);
-
-            float alphaAngle = curvFactor * (bendRangeX - xo);
-            float cosAlpha = Mathf.Cos(alphaAngle);
-            float sinAlpha = Mathf.Sin(alphaAngle);
-            //print(string.Format("yBend for {0} is {1}, end teta is {2}", g.name, yBend, tetaAngle));
-
-            float Xnew = 0;
-            float Ynew = 0;
-            float Znew = 0;
-            float oldZ = v.position.z;
-
-            if (y >= yMin && y <= yMax)
-            {
-                Ynew = -sin * (oldZ - 1 / curvFactor) + yo;
-                Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor;
-            }
-            else if (y < yMin)
-            {
-                Ynew = -sin * (oldZ - 1 / curvFactor) + yo + cos * (y - yMin);
-                Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor + sin * (y - yMin);
-            }
-            else if (y > yMax)
-            {
-                Ynew = -sin * (oldZ - 1 / curvFactor) + yo + cos * (y - yMax);
-                Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor + sin * (y - yMax);
-            }
-            else
-            {
-                print("there is something wrong here 2");
-            }
-
-
-            if (x >= xMin && x <= xMax)
-            {
-                Xnew = -sinAlpha * (oldZ - 1 / curvFactor) + xo;
-                Znew = cosAlpha * (oldZ - 1 / curvFactor) + 1 / curvFactor;
-            }
-            else if (x < xMax)
-            {
-                Xnew = -sinAlpha * (oldZ - 1 / curvFactor) + xo + cosAlpha * (x - xMin);
-                Znew = cosAlpha * (oldZ - 1 / curvFactor) + 1 / curvFactor + sinAlpha * (x - xMin);
-            }
-            else if (x > xMax)
-            {
-                Xnew = -sinAlpha * (oldZ - 1 / curvFactor) + xo + cosAlpha * (x - xMax);
-                Znew = cosAlpha * (oldZ - 1 / curvFactor) + 1 / curvFactor + sinAlpha * (x - xMax);
-            }
-            else
-            {
-                print("there is something wrong here 2");
-            }
-
-
-
-
-            v.position.x = Xnew;
-            v.position.y = Ynew;
-            v.position.z = Znew;
-
-            vh.SetUIVertex(v, i);
-
-        }
-
-
-
-    }
-
 }
