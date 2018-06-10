@@ -37,23 +37,22 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
         set
         {
             dirty = value;
-            Debug.Log("start to rebuild");
-            //find a way to call the rebuild manually
+            UIMesh = new Mesh();
+            collider = GetComponent<MeshCollider>();
+            collider.sharedMesh = UIMesh;
+            Graphic graphic = GetComponent<Graphic>();
+            if (graphic != null)
+            {
+                graphic.SetVerticesDirty();
+            }
         }
     }
+    
 
     //alternative method
     //instead of add a mesh to use for the raycas, use the 2d raycanst of the ui and return a 3d position on the deformed space 
     //to implement
-    //to do, on validate everything shold be updated
-
-    protected void OnEnable()
-    {
-        UIMesh = new Mesh();
-        collider = GetComponent<MeshCollider>();
-        collider.sharedMesh = UIMesh;
-    }
-
+    
 
     public void ModifyMesh(Mesh mesh)
     {
@@ -162,8 +161,8 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
 
     private void BendAlongY(VertexHelper vh)
     {
-        xMin = BendPivot.position.x - (RectTransform.rect.width / 2);
-        xMax = BendPivot.position.x + (RectTransform.rect.width / 2);
+        xMin = BendPivot.localPosition.x - (RectTransform.rect.width / 2);
+        xMax = BendPivot.localPosition.x + (RectTransform.rect.width / 2);
         List<UIVertex> vertices = new List<UIVertex>();
 
         vh.GetUIVertexStream(vertices);
