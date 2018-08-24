@@ -47,12 +47,14 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
             }
         }
     }
-    
+
 
     //alternative method
     //instead of add a mesh to use for the raycas, use the 2d raycanst of the ui and return a 3d position on the deformed space 
     //to implement
-    
+
+
+
 
     public void ModifyMesh(Mesh mesh)
     {
@@ -161,8 +163,10 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
 
     private void BendAlongY(VertexHelper vh)
     {
-        xMin = BendPivot.localPosition.x - (RectTransform.rect.width / 2);
-        xMax = BendPivot.localPosition.x + (RectTransform.rect.width / 2);
+        if (CurvatureK == 0) return;
+
+        xMin = BendPivot.position.x - (RectTransform.rect.width / 2);
+        xMax = BendPivot.position.x + (RectTransform.rect.width / 2);
         List<UIVertex> vertices = new List<UIVertex>();
 
         vh.GetUIVertexStream(vertices);
@@ -172,7 +176,10 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
             vh.PopulateUIVertex(ref v, i);
 
             float bendRange = 0;
-            float x = v.position.x;
+            Vector3 worldPos = GetComponent<RectTransform>().TransformPoint(v.position);
+
+            float x = worldPos.x;
+
             float xo = BendPivot.position.x;
 
 
@@ -195,14 +202,14 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
 
             float curvFactor = CurvatureK / -RectTransform.rect.width;
 
-            float tetaAngle = curvFactor * (bendRange - xo);
+            float tetaAngle = curvFactor  * (bendRange - xo);
             float cos = Mathf.Cos(tetaAngle);
             float sin = Mathf.Sin(tetaAngle);
             //print(string.Format("yBend for {0} is {1}, end teta is {2}", g.name, yBend, tetaAngle));
 
             float Xnew = 0;
             float Znew = 0;
-            float oldZ = v.position.z;
+            float oldZ = worldPos.z;
 
             if (x >= xMin && x <= xMax)
             {
@@ -224,8 +231,10 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
                 print("there is something wrong here 2");
             }
 
-            v.position.x = Xnew;
-            v.position.z = Znew;
+            worldPos.x = Xnew;
+            worldPos.z = Znew;
+
+            v.position = GetComponent<RectTransform>().InverseTransformPoint(worldPos);
 
             vh.SetUIVertex(v, i);
 

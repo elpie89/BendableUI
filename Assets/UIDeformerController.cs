@@ -20,7 +20,20 @@ public class UIDeformerController : MonoBehaviour
     private RectTransform rectTransform;
 
     [SerializeField]
-    private float curvatureK;    
+    private float curvatureK;
+    
+    protected void OnEnable()
+    {
+        //should be moved to onAttach
+        UIDeformerPivot deformerPivot = GetComponentInChildren<UIDeformerPivot>();
+        if (deformerPivot == null)
+        {
+            GameObject pivot = new GameObject("DeformerPivot");
+            pivot.transform.SetParent(this.transform);
+            deformerPivot = pivot.AddComponent<UIDeformerPivot>();
+        }
+        bendPivot = deformerPivot.transform;
+    }
 
     protected void OnValidate()
     {
