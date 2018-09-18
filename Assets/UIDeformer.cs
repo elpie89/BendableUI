@@ -49,9 +49,9 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
     }
 
 
-    //alternative method
-    //instead of add a mesh to use for the raycas, use the 2d raycanst of the ui and return a 3d position on the deformed space 
-    //to implement
+    //--alternative method
+    //right now I'm adding a mesh that will be used for the physic raycast
+    // i could actaully inherit from the unity raycaster and impleent a sort of graphic raycaster
 
 
 
