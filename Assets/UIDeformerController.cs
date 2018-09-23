@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [ExecuteInEditMode]
+[RequireComponent(typeof(Canvas))]
 public class UIDeformerController : MonoBehaviour
 {
     [SerializeField]
@@ -14,17 +15,16 @@ public class UIDeformerController : MonoBehaviour
     private int subdivisionLevel = 0;
 
     [SerializeField]
-    private Transform bendPivot;
-
-    [SerializeField]
-    private RectTransform rectTransform;
+    [Range(-1,1)]
+    private float bendPivot = 0;
 
     [SerializeField]
     private float curvatureK;
 
     private List<UIDeformer> uiDeformerList;
-    private UIDeformerPivot deformerPivot;
-
+    private Canvas canvas;
+    private Bounds canvasBound;
+    private RectTransform rectTransform;
 
     protected void Awake()
     {
@@ -40,19 +40,19 @@ public class UIDeformerController : MonoBehaviour
 
     private void Initialize()
     {
-        CreatePivot();
+        canvas = GetComponent<Canvas>();
+        rectTransform = GetComponent<RectTransform>();
         AddRequiredComponent();        
     }
 
     private void AddRequiredComponent()
     {
-        Debug.Log("component initialization");
         uiDeformerList = new List<UIDeformer>();
 
         Transform[] children = GetComponentsInChildren<Transform>(true);
         foreach (Transform g in children)
         {
-            if (g.gameObject.Equals(this.gameObject) || g.gameObject.Equals(deformerPivot.gameObject))
+            if (g.gameObject.Equals(this.gameObject))
             {
                 continue;
             }
@@ -67,18 +67,22 @@ public class UIDeformerController : MonoBehaviour
         }
     }
 
-    private void CreatePivot()
+    protected Bounds CalculateBounds(RectTransform transform, float uiScaleFactor)
     {
-        deformerPivot = GetComponentInChildren<UIDeformerPivot>();
-        if (deformerPivot == null)
+        Bounds bounds = new Bounds(transform.position, new Vector3(transform.rect.width, transform.rect.height, 0.0f) * uiScaleFactor);
+        RectTransform[] children = GetComponentsInChildren<RectTransform>(true);
+        if (transform.childCount > 0)
         {
-            GameObject pivot = new GameObject("DeformerPivot");
-            pivot.transform.SetParent(this.transform);
-            deformerPivot = pivot.AddComponent<UIDeformerPivot>();
+            foreach (RectTransform child in children)
+            {
+                Bounds childBounds = new Bounds(child.position, new Vector3(child.rect.width, child.rect.height, 0.0f) * uiScaleFactor);
+                bounds.Encapsulate(childBounds);
+            }
         }
-        bendPivot = deformerPivot.transform;
+
+        return bounds;
     }
-    
+
 
     protected void OnValidate()
     {
@@ -87,6 +91,7 @@ public class UIDeformerController : MonoBehaviour
             deformer.BendType = bendType;
             deformer.SubdivisionLevel = subdivisionLevel;
             deformer.BendPivot = bendPivot;
+            deformer.CanvasCenter = transform.position;
             deformer.RectTransform = rectTransform;
             deformer.CurvatureK = curvatureK;
             deformer.Dirty = true;

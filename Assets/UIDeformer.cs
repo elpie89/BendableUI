@@ -9,7 +9,7 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
 {
     public enum BendMode
     {
-        Sphere,
+        //Sphere,
         CylinderX,
         CylinderY
     }
@@ -23,9 +23,10 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
     private float yMin;
     private float yMax;
 
-    public Transform BendPivot { get; set; }
+    public float BendPivot { get; set; }
     public int SubdivisionLevel { get; set; }
     public RectTransform RectTransform { get; set; }
+    public Vector3 CanvasCenter { get; set; }
     public float CurvatureK { get; set; }
     public BendMode BendType { get; set; }
 
@@ -90,15 +91,15 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
             {
                 BendAlongY(verts);
             }
-            if (BendType == BendMode.CylinderX)
-            {
-                BendAlongX(verts);
-            }
-            if (BendType == BendMode.Sphere)
-            {
-                BendAlongX(verts);
-                BendAlongY(verts);
-            }            
+            //if (BendType == BendMode.CylinderX)
+            //{
+            //    BendAlongX(verts);
+            //}
+            //if (BendType == BendMode.Sphere)
+            //{
+            //    BendAlongX(verts);
+            //    BendAlongY(verts);
+            //}            
         }
         
         UIMesh.Clear();
@@ -161,12 +162,23 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
         c.tangent = (a.normal + b.normal) * 0.5f;
     }
 
+    private float JacobeanSystemTransform(float p,float max,float min)
+    {
+        return 2 * (p - min) / max - min - 1;
+    }
+
+    private float InverseJacobeanSystemTransform(float t,float max,float min)
+    {
+        return min +((1 + t) * (max - min) / 2) ;
+    }
+
     private void BendAlongY(VertexHelper vh)
     {
         if (CurvatureK == 0) return;
 
-        xMin = BendPivot.position.x - (RectTransform.rect.width / 2);
-        xMax = BendPivot.position.x + (RectTransform.rect.width / 2);
+
+        xMin = CanvasCenter.x - (RectTransform.rect.width / 2);
+        xMax = CanvasCenter.x + (RectTransform.rect.width / 2);
         List<UIVertex> vertices = new List<UIVertex>();
 
         vh.GetUIVertexStream(vertices);
@@ -180,7 +192,7 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
 
             float x = worldPos.x;
 
-            float xo = BendPivot.position.x;
+            float xo = InverseJacobeanSystemTransform(BendPivot, xMax, xMin);
 
 
             if (x <= xMin)
@@ -194,10 +206,6 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
             else if (x >= xMax)
             {
                 bendRange = xMax;
-            }
-            else
-            {
-                print("there is something wrong here");
             }
 
             float curvFactor = CurvatureK / -RectTransform.rect.width;
@@ -226,10 +234,6 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
                 Xnew = -sin * (oldZ - 1 / curvFactor) + xo + cos * (x - xMax);
                 Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor + sin * (x - xMax);
             }
-            else
-            {
-                print("there is something wrong here 2");
-            }
 
             worldPos.x = Xnew;
             worldPos.z = Znew;
@@ -239,84 +243,82 @@ public class UIDeformer : MonoBehaviour, IMeshModifier
             vh.SetUIVertex(v, i);
 
         }
-
-
-
     }
 
-    private void BendAlongX(VertexHelper vh)
-    {
-        xMin = BendPivot.position.y - (RectTransform.rect.height / 2);
-        xMax = BendPivot.position.y + (RectTransform.rect.height / 2);
-        List<UIVertex> vertices = new List<UIVertex>();
 
-        vh.GetUIVertexStream(vertices);
-        for (int i = 0; i < vh.currentIndexCount; i++)
-        {
-            UIVertex v = new UIVertex();
-            vh.PopulateUIVertex(ref v, i);
+    //private void BendAlongX(VertexHelper vh)
+    //{
+    //    xMin = BendPivot.position.y - (RectTransform.rect.height / 2);
+    //    xMax = BendPivot.position.y + (RectTransform.rect.height / 2);
+    //    List<UIVertex> vertices = new List<UIVertex>();
 
-            float bendRange = 0;
-            float x = v.position.y;
-            float xo = BendPivot.position.y;
+    //    vh.GetUIVertexStream(vertices);
+    //    for (int i = 0; i < vh.currentIndexCount; i++)
+    //    {
+    //        UIVertex v = new UIVertex();
+    //        vh.PopulateUIVertex(ref v, i);
 
-
-            if (x <= xMin)
-            {
-                bendRange = xMin;
-            }
-            else if (x > xMin && x < xMax)
-            {
-                bendRange = x;
-            }
-            else if (x >= xMax)
-            {
-                bendRange = xMax;
-            }
-            else
-            {
-                print("there is something wrong here");
-            }
-
-            float curvFactor = CurvatureK / RectTransform.rect.height;
-
-            float tetaAngle = curvFactor * (bendRange - xo);
-            float cos = Mathf.Cos(tetaAngle);
-            float sin = Mathf.Sin(tetaAngle);
-            //print(string.Format("yBend for {0} is {1}, end teta is {2}", g.name, yBend, tetaAngle));
-
-            float Ynew = 0;
-            float Znew = 0;
-            float oldZ = v.position.z;
-
-            if (x >= xMin && x <= xMax)
-            {
-                Ynew = -sin * (oldZ - 1 / curvFactor) + xo;
-                Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor;
-            }
-            else if (x < xMin)
-            {
-                Ynew = -sin * (oldZ - 1 / curvFactor) + xo + cos * (x - xMin);
-                Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor + sin * (x - xMin);
-            }
-            else if (x > xMax)
-            {
-                Ynew = -sin * (oldZ - 1 / curvFactor) + xo + cos * (x - xMax);
-                Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor + sin * (x - xMax);
-            }
-            else
-            {
-                print("there is something wrong here 2");
-            }
-
-            v.position.y = Ynew;
-            v.position.z = Znew;
-
-            vh.SetUIVertex(v, i);
-
-        }
+    //        float bendRange = 0;
+    //        float x = v.position.y;
+    //        float xo = BendPivot.position.y;
 
 
+    //        if (x <= xMin)
+    //        {
+    //            bendRange = xMin;
+    //        }
+    //        else if (x > xMin && x < xMax)
+    //        {
+    //            bendRange = x;
+    //        }
+    //        else if (x >= xMax)
+    //        {
+    //            bendRange = xMax;
+    //        }
+    //        else
+    //        {
+    //            print("there is something wrong here");
+    //        }
 
-    }
+    //        float curvFactor = CurvatureK / RectTransform.rect.height;
+
+    //        float tetaAngle = curvFactor * (bendRange - xo);
+    //        float cos = Mathf.Cos(tetaAngle);
+    //        float sin = Mathf.Sin(tetaAngle);
+    //        //print(string.Format("yBend for {0} is {1}, end teta is {2}", g.name, yBend, tetaAngle));
+
+    //        float Ynew = 0;
+    //        float Znew = 0;
+    //        float oldZ = v.position.z;
+
+    //        if (x >= xMin && x <= xMax)
+    //        {
+    //            Ynew = -sin * (oldZ - 1 / curvFactor) + xo;
+    //            Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor;
+    //        }
+    //        else if (x < xMin)
+    //        {
+    //            Ynew = -sin * (oldZ - 1 / curvFactor) + xo + cos * (x - xMin);
+    //            Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor + sin * (x - xMin);
+    //        }
+    //        else if (x > xMax)
+    //        {
+    //            Ynew = -sin * (oldZ - 1 / curvFactor) + xo + cos * (x - xMax);
+    //            Znew = cos * (oldZ - 1 / curvFactor) + 1 / curvFactor + sin * (x - xMax);
+    //        }
+    //        else
+    //        {
+    //            print("there is something wrong here 2");
+    //        }
+
+    //        v.position.y = Ynew;
+    //        v.position.z = Znew;
+
+    //        vh.SetUIVertex(v, i);
+
+    //    }
+
+
+
+    //}
 }
